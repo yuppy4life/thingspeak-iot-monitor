@@ -6,11 +6,33 @@
   <title>ThingSpeak IoT Monitor</title>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <style>
-    body {font-family: Arial, sans-serif; margin:0; padding:1rem; background:#f0f4f8;}
-    .card {background:#fff; padding:1.5rem; border-radius:12px; box-shadow:0 4px 10px rgba(0,0,0,.1); max-width:700px; margin:auto;}
-    h1 {font-size:1.4rem; text-align:center; margin-bottom:1rem;}
-    .result {font-size:1.1rem; text-align:center; margin:.5rem 0;}
-    canvas {max-width:100%;}
+    body {
+      font-family: Arial, sans-serif;
+      padding: 1rem;
+      margin: 0;
+      background: #fff9db; /* light yellow */
+    }
+    .card {
+      background: white;
+      padding: 1.5rem;
+      border-radius: 12px;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+      max-width: 700px;
+      margin: auto;
+    }
+    h1 {
+      font-size: 1.4rem;
+      margin-bottom: 1rem;
+      text-align: center;
+    }
+    .result {
+      font-size: 1.1rem;
+      margin: 0.5rem 0;
+      text-align: center;
+    }
+    canvas {
+      max-width: 100%;
+    }
   </style>
 </head>
 <body>
@@ -24,32 +46,56 @@
 
   <script>
     const channelID       = 2994825;
-    const apiKey          = 'H6JGG2ORJPJFQCEF';   // read-only key
-    const field1          = 'field1';             // Roll
-    const field2          = 'field2';             // Pitch
-    const resultsLimit    = 800;                  // safety cap
-    const refreshInterval = 30000;                // 30 s
+    const apiKey          = 'H6JGG2ORJPJFQCEF';
+    const field1          = 'field1'; // Roll
+    const field2          = 'field2'; // Pitch
+    const resultsLimit    = 800;
+    const refreshInterval = 30000;
 
     const ctx = document.getElementById('iotChart').getContext('2d');
     const iotChart = new Chart(ctx, {
-      type:'line',
-      data:{labels:[], datasets:[
-        {label:'Roll',  data:[], borderColor:'#007bff', fill:false, tension:.2},
-        {label:'Pitch', data:[], borderColor:'#28a745', fill:false, tension:.2}
-      ]},
-      options:{responsive:true, scales:{
-        x:{type:'time', time:{unit:'minute', tooltipFormat:'HH:mm:ss'}},
-        y:{beginAtZero:true}
-      }}
+      type: 'line',
+      data: {
+        labels: [],
+        datasets: [
+          {
+            label: 'Roll',
+            data: [],
+            borderColor: '#007bff',
+            fill: false,
+            tension: 0.2
+          },
+          {
+            label: 'Pitch',
+            data: [],
+            borderColor: '#28a745',
+            fill: false,
+            tension: 0.2
+          }
+        ]
+      },
+      options: {
+        responsive: true,
+        scales: {
+          x: {
+            type: 'time',
+            time: {
+              unit: 'minute',
+              tooltipFormat: 'HH:mm:ss'
+            }
+          },
+          y: {
+            beginAtZero: true
+          }
+        }
+      }
     });
 
     function fetchAndUpdate() {
       const now = Date.now();
-      const cutoff = now - 15 * 60 * 1000;   // 15 min ago
+      const cutoff = now - 15 * 60 * 1000;
 
-      const url =
-        `https://api.thingspeak.com/channels/${channelID}/feeds.json` +
-        `?api_key=${apiKey}&results=${resultsLimit}`;
+      const url = `https://api.thingspeak.com/channels/${channelID}/feeds.json?api_key=${apiKey}&results=${resultsLimit}`;
 
       fetch(url)
         .then(r => r.json())
@@ -67,7 +113,9 @@
             labels.push(new Date(t));
             rollData.push(roll);
             pitchData.push(pitch);
-            sumRoll += roll; sumPitch += pitch; n++;
+            sumRoll += roll;
+            sumPitch += pitch;
+            n++;
 
             (roll+pitch > 20 ? above20 : below20)++;
           });
