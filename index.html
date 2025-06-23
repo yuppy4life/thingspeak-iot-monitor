@@ -1,144 +1,66 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>ThingSpeak IoT Monitor</title>
-  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <meta charset="UTF-8">
+  <title>ThingSpeak Real-Time Data</title>
   <style>
     body {
       font-family: Arial, sans-serif;
-      padding: 1rem;
-      margin: 0;
-      background: #fff9db; /* light yellow */
+      padding: 20px;
+      background: #f9f9f9;
     }
-    .card {
-      background: white;
-      padding: 1.5rem;
-      border-radius: 12px;
-      box-shadow: 0 4px 10px rgba(0,0,0,0.1);
-      max-width: 700px;
+    .container {
+      background: #fff;
+      padding: 20px;
+      max-width: 400px;
       margin: auto;
+      box-shadow: 0 0 10px rgba(0,0,0,0.1);
+      border-radius: 8px;
     }
     h1 {
-      font-size: 1.4rem;
-      margin-bottom: 1rem;
+      font-size: 24px;
       text-align: center;
     }
-    .result {
-      font-size: 1.1rem;
-      margin: 0.5rem 0;
-      text-align: center;
+    .data {
+      margin-top: 20px;
+      font-size: 18px;
     }
-    canvas {
-      max-width: 100%;
+    .label {
+      font-weight: bold;
     }
   </style>
 </head>
 <body>
-  <div class="card">
-    <h1>ThingSpeak IoT Data Summary (Last 15 Minutes)</h1>
-    <div class="result" id="avgRoll">Average Roll: loading…</div>
-    <div class="result" id="avgPitch">Average Pitch: loading…</div>
-    <div class="result" id="ratio">Ratio (Roll + Pitch &gt; 20 : &lt; 20): loading…</div>
-    <canvas id="iotChart" height="200"></canvas>
+  <div class="container">
+    <h1>ThingSpeak Live Data</h1>
+    <div class="data">
+      <div><span class="label">Variable 1:</span> <span id="var1">Loading...</span></div>
+      <div><span class="label">Variable 2:</span> <span id="var2">Loading...</span></div>
+    </div>
   </div>
 
   <script>
-    const channelID       = 2994825;
-    const apiKey          = 'H6JGG2ORJPJFQCEF';
-    const field1          = 'field1'; // Roll
-    const field2          = 'field2'; // Pitch
-    const resultsLimit    = 800;
-    const refreshInterval = 30000;
+    const channelID = '2994825';
+    const apiKey = 'H6JGG2ORJPJFQCEF';
+    const fetchInterval = 30000; // 30 seconds
 
-    const ctx = document.getElementById('iotChart').getContext('2d');
-    const iotChart = new Chart(ctx, {
-      type: 'line',
-      data: {
-        labels: [],
-        datasets: [
-          {
-            label: 'Roll',
-            data: [],
-            borderColor: '#007bff',
-            fill: false,
-            tension: 0.2
-          },
-          {
-            label: 'Pitch',
-            data: [],
-            borderColor: '#28a745',
-            fill: false,
-            tension: 0.2
-          }
-        ]
-      },
-      options: {
-        responsive: true,
-        scales: {
-          x: {
-            type: 'time',
-            time: {
-              unit: 'minute',
-              tooltipFormat: 'HH:mm:ss'
-            }
-          },
-          y: {
-            beginAtZero: true
-          }
-        }
+    async function fetchData() {
+      try {
+        const response = await fetch(`https://api.thingspeak.com/channels/${channelID}/feeds.json?results=1&api_key=${apiKey}`);
+        const data = await response.json();
+        const latest = data.feeds[0];
+
+        document.getElementById('var1').textContent = latest.field1 || 'N/A';
+        document.getElementById('var2').textContent = latest.field2 || 'N/A';
+      } catch (error) {
+        console.error('Error fetching data:', error);
+        document.getElementById('var1').textContent = 'Error';
+        document.getElementById('var2').textContent = 'Error';
       }
-    });
-
-    function fetchAndUpdate() {
-      const now = Date.now();
-      const cutoff = now - 15 * 60 * 1000;
-
-      const url = `https://api.thingspeak.com/channels/${channelID}/feeds.json?api_key=${apiKey}&results=${resultsLimit}`;
-
-      fetch(url)
-        .then(r => r.json())
-        .then(({feeds}) => {
-          const labels=[], rollData=[], pitchData=[];
-          let sumRoll=0, sumPitch=0, n=0, above20=0, below20=0;
-
-          feeds.forEach(f => {
-            const t = new Date(f.created_at).getTime();
-            if (t < cutoff) return;
-            const roll  = parseFloat(f[field1]);
-            const pitch = parseFloat(f[field2]);
-            if (isNaN(roll) || isNaN(pitch)) return;
-
-            labels.push(new Date(t));
-            rollData.push(roll);
-            pitchData.push(pitch);
-            sumRoll += roll;
-            sumPitch += pitch;
-            n++;
-
-            (roll+pitch > 20 ? above20 : below20)++;
-          });
-
-          document.getElementById('avgRoll').textContent  = `Average Roll: ${n ? (sumRoll/n).toFixed(2) : 'N/A'}`;
-          document.getElementById('avgPitch').textContent = `Average Pitch: ${n ? (sumPitch/n).toFixed(2) : 'N/A'}`;
-          document.getElementById('ratio').textContent    =
-            `Ratio (Roll + Pitch > 20 : < 20): ${n ? `${above20} : ${below20}` : 'N/A'}`;
-
-          iotChart.data.labels = labels;
-          iotChart.data.datasets[0].data = rollData;
-          iotChart.data.datasets[1].data = pitchData;
-          iotChart.update();
-        })
-        .catch(err => {
-          console.error(err);
-          ['avgRoll','avgPitch','ratio'].forEach(id =>
-            document.getElementById(id).textContent = 'Error loading data');
-        });
     }
 
-    fetchAndUpdate();
-    setInterval(fetchAndUpdate, refreshInterval);
+    fetchData(); // Initial fetch
+    setInterval(fetchData, fetchInterval); // Repeat every 30 seconds
   </script>
 </body>
 </html>
