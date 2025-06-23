@@ -2,65 +2,92 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>ThingSpeak Real-Time Data</title>
+  <title>ThingSpeak Live Data</title>
   <style>
     body {
       font-family: Arial, sans-serif;
       padding: 20px;
-      background: #f9f9f9;
+      background-color: #fffde7; /* light yellow */
     }
     .container {
-      background: #fff;
-      padding: 20px;
-      max-width: 400px;
+      max-width: 500px;
       margin: auto;
+      padding: 20px;
+      background-color: #ffffff;
       box-shadow: 0 0 10px rgba(0,0,0,0.1);
-      border-radius: 8px;
+      border-radius: 10px;
     }
-    h1 {
-      font-size: 24px;
+    h2 {
+      text-align: center;
+      margin-bottom: 20px;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+    td, th {
+      padding: 10px;
+      border-bottom: 1px solid #ddd;
       text-align: center;
     }
-    .data {
-      margin-top: 20px;
-      font-size: 18px;
-    }
-    .label {
-      font-weight: bold;
+    .timestamp {
+      font-size: 12px;
+      color: #555;
     }
   </style>
 </head>
 <body>
   <div class="container">
-    <h1>ThingSpeak Live Data</h1>
-    <div class="data">
-      <div><span class="label">Variable 1:</span> <span id="var1">Loading...</span></div>
-      <div><span class="label">Variable 2:</span> <span id="var2">Loading...</span></div>
-    </div>
+    <h2>ThingSpeak Real-Time Data</h2>
+    <table>
+      <thead>
+        <tr>
+          <th>Time</th>
+          <th>Variable 1 (field1)</th>
+          <th>Variable 2 (field2)</th>
+        </tr>
+      </thead>
+      <tbody id="data-body">
+        <tr><td colspan="3">Loading...</td></tr>
+      </tbody>
+    </table>
   </div>
 
   <script>
     const channelID = '2994825';
     const apiKey = 'H6JGG2ORJPJFQCEF';
-    const fetchInterval = 30000; // 30 seconds
+    const fetchInterval = 30000;
 
     async function fetchData() {
       try {
-        const response = await fetch(`https://api.thingspeak.com/channels/${channelID}/feeds.json?results=1&api_key=${apiKey}`);
-        const data = await response.json();
-        const latest = data.feeds[0];
+        const response = await fetch(`https://api.thingspeak.com/channels/${channelID}/feeds.json?results=2&api_key=${apiKey}`);
+        const json = await response.json();
+        const feeds = json.feeds;
 
-        document.getElementById('var1').textContent = latest.field1 || 'N/A';
-        document.getElementById('var2').textContent = latest.field2 || 'N/A';
-      } catch (error) {
-        console.error('Error fetching data:', error);
-        document.getElementById('var1').textContent = 'Error';
-        document.getElementById('var2').textContent = 'Error';
+        if (!feeds || feeds.length === 0) return;
+
+        const tbody = document.getElementById('data-body');
+        tbody.innerHTML = '';
+
+        feeds.reverse().forEach(feed => {
+          const row = document.createElement('tr');
+          const time = new Date(feed.created_at).toLocaleTimeString();
+          row.innerHTML = `
+            <td>${time}</td>
+            <td>${feed.field1 ?? 'N/A'}</td>
+            <td>${feed.field2 ?? 'N/A'}</td>
+          `;
+          tbody.appendChild(row);
+        });
+
+      } catch (err) {
+        console.error('Error:', err);
+        document.getElementById('data-body').innerHTML = '<tr><td colspan="3">Error loading data</td></tr>';
       }
     }
 
-    fetchData(); // Initial fetch
-    setInterval(fetchData, fetchInterval); // Repeat every 30 seconds
+    fetchData();
+    setInterval(fetchData, fetchInterval);
   </script>
 </body>
 </html>
